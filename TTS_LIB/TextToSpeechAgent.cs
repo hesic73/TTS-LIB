@@ -41,7 +41,7 @@ namespace TTS_LIB
         }
 
         // TO DO: more settings
-        public byte[] plainTextToSpeech(string text)
+        public Stream plainTextToSpeech(string text)
         {
             var synthesisInput = new SynthesisInput { Text = text };
             var ss_request = new SynthesizeSpeechRequest
@@ -53,10 +53,10 @@ namespace TTS_LIB
             var request = _service.Text.Synthesize(ss_request);
             var response = request.Execute();
 
-            return Convert.FromBase64String(response.AudioContent);
+            return new MemoryStream(Convert.FromBase64String(response.AudioContent));
         }
 
-        public Task<byte[]> plainTextToSpeechAsync(string text)
+        public Task<Stream> plainTextToSpeechAsync(string text)
         {
             var synthesisInput = new SynthesisInput { Text = text };
             var ss_request = new SynthesizeSpeechRequest
@@ -67,12 +67,51 @@ namespace TTS_LIB
             };
             var request = _service.Text.Synthesize(ss_request);
 
-            return Task<byte[]>.Run(()=>
+            return Task<Stream>.Run(() =>
             {
                 var response = request.Execute();
 
-                return Convert.FromBase64String(response.AudioContent);
+                Stream s = new MemoryStream(Convert.FromBase64String(response.AudioContent));
+                return s;
             });
+
+        }
+
+        public Task<Stream> longPlainTextToSpeechAsync(string long_text)
+        {
+            if (long_text.Length < Utils.speech_synthesis_limit)
+            {
+                return plainTextToSpeechAsync(long_text);
+            }
+            var texts = Utils.SplitLongString(long_text);
+
+            // maybe some limit ?
+
+            var tasks = texts.Select((text) =>
+                Task<string>.Run(() =>
+                {
+                    var synthesisInput = new SynthesisInput { Text = text };
+                    var ss_request = new SynthesizeSpeechRequest
+                    {
+                        AudioConfig = _audioConfig,
+                        Input = synthesisInput,
+                        Voice = _voiceSelectionParams
+                    };
+                    var request = _service.Text.Synthesize(ss_request);
+                    var response = request.Execute();
+                    Stream s = new MemoryStream(Convert.FromBase64String(response.AudioContent));
+                    return s;
+                })
+            );
+
+
+            return Task<Stream>.Run(() =>
+            {
+                var streams = tasks.Select((task) => task.Result);
+                var s = Utils.ConCatenateMp3Files(streams);
+                return s;
+            });
+
 
         }
     }

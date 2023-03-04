@@ -10,6 +10,8 @@
     <PackageReference Include="Google.Apis" Version="1.60.0" />
     <PackageReference Include="Google.Apis.Tasks.v1" Version="1.60.0.2384" />
     <PackageReference Include="Google.Apis.Texttospeech.v1beta1" Version="1.60.0.2924" />
+    <PackageReference Include="NAudio" Version="2.1.0" />
+    <PackageReference Include="NAudio.Core" Version="2.1.0" />
   </ItemGroup>
 
 </Project>
